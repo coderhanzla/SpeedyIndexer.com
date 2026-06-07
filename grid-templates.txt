@@ -1,0 +1,82 @@
+﻿
+src\app\about\page.js:243:            style: { display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 0 },
+src\app\about\page.js:277:        React.createElement('div', { className: 
+'collapse-on-mobile', style: { display: 'grid', gridTemplateColumns: '1fr 
+1fr', gap: 72, alignItems: 'center' } },
+src\app\about\page.js:312:                style: { display: 'grid', 
+gridTemplateColumns: '1fr 1fr', gap: 14 },
+src\app\about\page.js:428:            style: { display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 16 },
+src\app\about\page.js:569:            style: { display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16 },
+src\app\about\page.js:618:            style: { display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 },
+src\app\api-docs\page.js:117:        style: { display: 'grid', 
+gridTemplateColumns: '1.2fr 0.8fr 0.6fr 2fr', gap: 16, padding: '13px 18px', 
+borderBottom: `1px solid rgba(255,255,255,0.04)`, alignItems: 'start', 
+fontSize: '0.8125rem' }
+src\app\api-docs\page.js:141:            style: { display: 'grid', 
+gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginTop: 28 }
+src\app\api-docs\page.js:196:                style: { display: 'grid', 
+gridTemplateColumns: '1.2fr 0.8fr 0.6fr 2fr', gap: 16, padding: '10px 18px', 
+background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${T.border}`, 
+fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', color: T.txt2, 
+textTransform: 'uppercase' }
+src\app\api-docs\page.js:315:                    style: { display: 'grid', 
+gridTemplateColumns: '80px 1fr 3fr', gap: 16, padding: '13px 18px', 
+borderBottom: i < codes.length - 1 ? `1px solid rgba(255,255,255,0.04)` : 
+'none', alignItems: 'center', fontSize: '0.875rem' }
+src\app\api-docs\page.js:403:                style: { display: 'grid', 
+gridTemplateColumns: 'repeat(5,1fr)', background: 'rgba(255,255,255,0.04)', 
+borderBottom: `1px solid ${T.border}` }
+src\app\api-docs\page.js:419:                    style: { display: 'grid', 
+gridTemplateColumns: 'repeat(5,1fr)', borderTop: `1px solid ${T.border}` }
+src\app\api-docs\page.js:475:            style: { maxWidth: 1200, margin: '0 
+auto', padding: '0 24px', display: 'grid', gridTemplateColumns: '220px 1fr', 
+gap: 40, paddingTop: 40, paddingBottom: 80 }
+src\app\blog\page.js:332:                ? React.createElement('div', { style: 
+{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', 
+gap: 16 } },
+src\app\blog\page.js:514:            React.createElement('div', { style: { 
+display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', 
+gap: 14 } },
+src\app\features\page.js:243:            display: 'grid', gridTemplateColumns: 
+'1fr 1fr', gap: 56, alignItems: 'center',
+src\app\features\page.js:259:            React.createElement('ul', { 
+className: 'collapse-on-mobile', style: { listStyle: 'none', display: 'grid', 
+gridTemplateColumns: '1fr 1fr', gap: '10px 20px' } },
+src\app\features\page.js:333:            style: { display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 14 }
+src\app\pricing\page.js:259:                style: { display: 'grid', 
+gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', background: 
+'rgba(255,255,255,0.03)', borderBottom: `1px solid ${T.border}` }
+src\app\pricing\page.js:284:                                display: 'grid', 
+gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+src\app\pricing\page.js:417:            React.createElement('div', { style: { 
+display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', 
+gap: 14, alignItems: 'start' } },
+src\app\page.js:150:                    display: 'grid', gridTemplateColumns: 
+'repeat(3, 1fr)',
+src\app\page.js:329:                <div style={{ display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+src\app\page.js:366:                <div style={{ display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 2 }}>
+src\app\page.js:463:                    <div className="collapse-on-mobile" 
+style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', background: 
+'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+src\app\page.js:547:                <div style={{ display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, 
+alignItems: 'start' }}>
+src\app\page.js:631:                <div style={{ display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+src\app\page.js:693:                <div style={{ display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fill, minmax(160px,1fr))', gap: 12, 
+maxWidth: 900, margin: '0 auto' }}>
+src\app\page.js:739:                <div style={{ display: 'grid', 
+gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16 }}>
+src\app\page.js:878:                <div className="collapse-on-mobile" 
+style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 48, 
+marginBottom: 52 }}>
+
+

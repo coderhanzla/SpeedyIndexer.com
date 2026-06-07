@@ -1,0 +1,35 @@
+const path = require('path');
+
+const nextConfig = {
+    compress: true,
+    poweredByHeader: false,
+    outputFileTracingRoot: path.join(__dirname),
+    async headers() {
+        return [
+            {
+                source: '/_next/static/:path*',
+                headers: [
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, max-age=31536000, immutable',
+                    },
+                ],
+            },
+            {
+                source: '/:path*',
+                headers: [
+                    {
+                        key: 'X-Content-Type-Options',
+                        value: 'nosniff',
+                    },
+                    {
+                        key: 'Referrer-Policy',
+                        value: 'strict-origin-when-cross-origin',
+                    },
+                ],
+            },
+        ];
+    },
+};
+
+module.exports = nextConfig;

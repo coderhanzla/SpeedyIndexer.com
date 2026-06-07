@@ -1,0 +1,19 @@
+
+> dev
+> node node_modules/next/dist/bin/next dev --port 3000
+
+   ▲ Next.js 15.5.18
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.29.114:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3s
+ ○ Compiling / ...
+ GET / 500 in 13225ms
+ ✓ Compiled /_error in 366ms (623 modules)
+ GET / 200 in 618ms
+ ✓ Compiled in 2.1s (980 modules)
+ GET / 200 in 766ms
+ GET / 200 in 102ms
+[?25h

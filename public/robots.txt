@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://speedyindexer.com/sitemap.xml
+Sitemap: https://speedyindexer.com/sitemaps/google-discovery-index.xml
