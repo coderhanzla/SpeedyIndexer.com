@@ -66,22 +66,43 @@ export async function queueGoogleDiscoveryUrls(req, inputUrls) {
     }
 
     const testMode = isTestMode();
+    const requiredCredits = acceptedUrls.length;
     const creditAccount = testMode ? getMockCreditAccount(auth.user) : await getCreditBalance(auth.user);
 
-    if (!testMode && Number(creditAccount.credits_balance || 0) < acceptedUrls.length) {
+    if (!testMode && Number(creditAccount.credits_balance || 0) < requiredCredits) {
         return NextResponse.json(
-            { success: false, error: 'Insufficient credits. Please buy more credits.', required: acceptedUrls.length, balance: creditAccount.credits_balance },
+            { success: false, error: 'Insufficient credits. Please buy more credits.', required: requiredCredits, balance: creditAccount.credits_balance },
             { status: 402 }
         );
     }
 
-    const spent = testMode
-        ? creditAccount
-        : await useCredits({
-            userId: auth.user.id,
-            amount: acceptedUrls.length,
-            note: `${acceptedUrls.length} URL submissions`,
-        });
+    let queue;
+    try {
+        queue = await getIndexingQueue();
+    } catch (queueError) {
+        return NextResponse.json(
+            { success: false, error: `Queue unavailable: ${queueError.message || 'Failed to connect to queue'}` },
+            { status: 503 }
+        );
+    }
+
+    let spent = creditAccount;
+    if (!testMode) {
+        try {
+            spent = await useCredits({
+                userId: auth.user.id,
+                amount: requiredCredits,
+                note: `${requiredCredits} URL submissions`,
+            });
+        } catch (creditError) {
+            return NextResponse.json(
+                { success: false, error: creditError.message || 'Unable to deduct credits.', required: requiredCredits },
+                { status: creditError.status || 500 }
+            );
+        }
+    }
+
+    const deductedCredits = testMode ? 0 : requiredCredits;
 
     let queued = 0;
     let insertFailed = 0;
@@ -112,7 +133,6 @@ export async function queueGoogleDiscoveryUrls(req, inputUrls) {
             });
 
         try {
-            const queue = await getIndexingQueue();
             const payload = {
                 id: data.id,
                 url,
@@ -164,7 +184,7 @@ export async function queueGoogleDiscoveryUrls(req, inputUrls) {
         queued,
         skipped,
         invalid,
-        creditsDeducted: testMode ? 0 : acceptedUrls.length - insertFailed,
+        creditsDeducted: testMode ? 0 : deductedCredits - insertFailed,
         balanceAfter: testMode ? 40 : Number(spent.credits_balance || 0) + insertFailed,
         testMode,
         message: 'URLs queued for discovery. Completed means submitted for discovery, not guaranteed Google indexing.',
