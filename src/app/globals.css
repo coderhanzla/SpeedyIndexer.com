@@ -1494,6 +1494,60 @@ tbody tr:hover {
     color: #bbf7d0;
 }
 
+.discover-shell {
+    min-height: 100vh;
+    background: #f8fafc;
+    color: #0f172a;
+    padding: 48px clamp(18px, 5vw, 72px);
+}
+
+.discover-shell header {
+    max-width: 920px;
+    margin-bottom: 28px;
+}
+
+.discover-shell header a {
+    color: #f97316;
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.discover-shell h1 {
+    margin: 8px 0;
+    font-size: clamp(34px, 6vw, 72px);
+    letter-spacing: 0;
+    line-height: 1;
+}
+
+.discover-shell header p,
+.discover-shell header span {
+    color: #475569;
+}
+
+.discover-shell section {
+    display: grid;
+    gap: 10px;
+    max-width: 1040px;
+}
+
+.discover-shell article {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.discover-shell article a {
+    color: #1d4ed8;
+    overflow-wrap: anywhere;
+}
+
+.discover-shell time {
+    color: #64748b;
+    white-space: nowrap;
+}
+
 .auth-switch {
     margin: 22px 0 0;
     color: var(--txt-secondary);

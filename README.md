@@ -20,11 +20,12 @@ Next.js frontend with a Supabase + Redis/BullMQ Google discovery pipeline.
 10. Add credits to the user first from `/admin/credits`. URL submission is
     blocked unless the user has enough credits.
 
-Submitted URLs are inserted into the Supabase `urls` table with `submitted`,
-validated by the worker, added to generated sitemap batches, submitted to
-Google Search Console as a sitemap index, then updated through:
-`submitted`, `validating`, `valid`, `sitemap_added`, `sitemap_submitted`,
-`completed`, or `failed`.
+Submitted URLs are inserted into the Supabase `urls` table as `queued`,
+validated by the worker, added to generated public sitemap batches, submitted
+as discovery signals, then rechecked later when an index-check provider is
+configured. Statuses are:
+`queued`, `processing`, `discovery_submitted`, `waiting_for_google`, `indexed`,
+`not_indexed`, or `failed`.
 
 This project does not promise guaranteed Google indexing. It improves Google
 discovery by validating URLs, maintaining sitemaps, and submitting those
@@ -51,6 +52,18 @@ Use this path if service-account JSON keys are blocked.
 
 `GOOGLE_API_KEY` can be stored for future Google APIs, but it does not authorize
 Search Console sitemap submission by itself.
+
+## Index Checking
+
+Index checks use a safe API-backed search query: `site:exact-url`.
+
+Configure either:
+
+- `SERPAPI_KEY`
+- or `GOOGLE_CUSTOM_SEARCH_API_KEY` and `GOOGLE_CUSTOM_SEARCH_CX`
+
+Without one of these providers, URLs stay in `waiting_for_google` after
+discovery submission instead of being falsely marked indexed.
 
 ## Supabase Setup
 
@@ -119,8 +132,10 @@ The app queues jobs with BullMQ. The worker consumes those jobs separately.
 
 ## Public Sitemap URLs
 
-- `/sitemaps/google-discovery-index.xml`
-- `/sitemaps/google-discovery-0001.xml`
+- `/sitemap-index.xml`
+- `/sitemaps/user-urls-1.xml`
+- `/feeds/recent-urls.xml`
+- `/discover`
 
 ## Test 10 URLs
 
@@ -147,11 +162,9 @@ Credit test:
 Expected statuses:
 
 - `queued`
-- `validating`
-- `valid`
-- `invalid`
-- `sitemap_added`
-- `sitemap_submitted`
-- `google_submission_failed`
-- `completed`
+- `processing`
+- `discovery_submitted`
+- `waiting_for_google`
+- `indexed`
+- `not_indexed`
 - `failed`

@@ -16,7 +16,7 @@ export function escapeXml(value) {
 }
 
 export function getSitemapIndexUrl() {
-    return `${getBaseUrl()}/sitemaps/google-discovery-index.xml`;
+    return `${getBaseUrl()}/sitemap-index.xml`;
 }
 
 export function getSitemapUrl(file_name) {
@@ -42,7 +42,7 @@ async function getOpenSitemapBatch() {
         .maybeSingle();
 
     const batchNumber = Number(latest?.batch_number || 0) + 1;
-    const fileName = `google-discovery-${String(batchNumber).padStart(4, '0')}.xml`;
+    const fileName = `user-urls-${batchNumber}.xml`;
     const { data: created, error } = await workerSupabase
         .from('google_sitemaps')
         .insert({
@@ -61,6 +61,7 @@ async function getOpenSitemapBatch() {
 
 export async function addUrlToGoogleSitemap(urlRecord, validationResult) {
     const batch = await getOpenSitemapBatch();
+    const sitemapUrl = getSitemapUrl(batch.file_name);
 
     const { error: urlError } = await workerSupabase
         .from('google_sitemap_urls')
@@ -88,7 +89,7 @@ export async function addUrlToGoogleSitemap(urlRecord, validationResult) {
 
     return {
         ...batch,
-        sitemap_url: batch.sitemap_url || getSitemapUrl(batch.file_name),
+        sitemap_url: sitemapUrl,
         index_url: getSitemapIndexUrl(),
     };
 }
@@ -96,14 +97,14 @@ export async function addUrlToGoogleSitemap(urlRecord, validationResult) {
 export async function renderSitemapIndex() {
     const { data, error } = await workerSupabase
         .from('google_sitemaps')
-        .select('file_name, sitemap_url, updated_at')
+        .select('file_name, updated_at')
         .order('batch_number', { ascending: true });
 
     if (error) throw error;
 
     const entries = (data || [])
         .map((item) => `  <sitemap>
-    <loc>${escapeXml(item.sitemap_url || getSitemapUrl(item.file_name))}</loc>
+    <loc>${escapeXml(getSitemapUrl(item.file_name))}</loc>
     <lastmod>${escapeXml(item.updated_at || new Date().toISOString())}</lastmod>
   </sitemap>`)
         .join('\n');

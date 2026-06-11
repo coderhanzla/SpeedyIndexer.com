@@ -24,8 +24,8 @@ export async function GET(req) {
             acc[row.status] = (acc[row.status] || 0) + 1;
             return acc;
         }, {});
-        const completed = byStatus.completed || 0;
-        const failed = (byStatus.failed || 0) + (byStatus.invalid || 0) + (byStatus.google_submission_failed || 0);
+        const submitted = (byStatus.discovery_submitted || 0) + (byStatus.waiting_for_google || 0) + (byStatus.indexed || 0) + (byStatus.not_indexed || 0);
+        const failed = byStatus.failed || 0;
         let queueCounts = {
             waiting: 0,
             active: 0,
@@ -52,14 +52,14 @@ export async function GET(req) {
         return NextResponse.json({
             success: true,
             submittedToday: rows.length,
-            processedToday: completed + failed,
-            validationFailures: byStatus.invalid || 0,
-            googleSubmissionErrors: byStatus.google_submission_failed || 0,
+            processedToday: submitted + failed,
+            validationFailures: failed,
+            googleSubmissionErrors: 0,
             queueSize: (queueCounts.waiting || 0) + (queueCounts.active || 0) + (queueCounts.delayed || 0),
             queueCounts,
             workerStatus,
-            processingRatePerHour: completed,
-            successRate: completed + failed === 0 ? 0 : Math.round((completed / (completed + failed)) * 100),
+            processingRatePerHour: submitted,
+            successRate: submitted + failed === 0 ? 0 : Math.round(((byStatus.indexed || 0) / (submitted + failed)) * 100),
             byStatus,
         });
     } catch (error) {

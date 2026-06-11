@@ -13,6 +13,11 @@ create table if not exists public.urls (
     sitemap_url text,
     sitemap_index_url text,
     submitted_at timestamptz,
+    discovery_submitted_at timestamptz,
+    recheck_at timestamptz,
+    indexed_at timestamptz,
+    index_checked_at timestamptz,
+    index_check_result jsonb,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
@@ -25,6 +30,11 @@ alter table public.urls add column if not exists noindex boolean not null defaul
 alter table public.urls add column if not exists validation_result jsonb;
 alter table public.urls add column if not exists sitemap_url text;
 alter table public.urls add column if not exists sitemap_index_url text;
+alter table public.urls add column if not exists discovery_submitted_at timestamptz;
+alter table public.urls add column if not exists recheck_at timestamptz;
+alter table public.urls add column if not exists indexed_at timestamptz;
+alter table public.urls add column if not exists index_checked_at timestamptz;
+alter table public.urls add column if not exists index_check_result jsonb;
 
 create unique index if not exists urls_user_id_url_key
     on public.urls (user_id, url);

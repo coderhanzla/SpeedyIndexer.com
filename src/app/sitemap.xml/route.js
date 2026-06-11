@@ -36,7 +36,9 @@ export async function GET() {
             '/terms-of-service',
             '/cookie-policy',
             '/gdpr',
-            '/sitemaps/google-discovery-index.xml',
+            '/discover',
+            '/sitemap-index.xml',
+            '/feeds/recent-urls.xml',
         ];
 
         const { data, error } = await workerSupabase

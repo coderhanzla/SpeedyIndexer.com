@@ -37,7 +37,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-const ADMIN_EMAIL = 'admin1@yopmail.com';
+const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin1@yopmail.com').trim().toLowerCase();
+const SHOULD_PREPARE_ADMIN = process.env.NODE_ENV !== 'production';
 
 const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -399,14 +400,36 @@ export default function AdminDashboard() {
         event.preventDefault();
         setAuthError('');
 
-        if (email.trim().toLowerCase() !== ADMIN_EMAIL) {
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (normalizedEmail !== ADMIN_EMAIL) {
             setAuthError('This admin area only accepts the configured owner account.');
             return;
         }
 
         setLoginLoading(true);
+
+        if (SHOULD_PREPARE_ADMIN) {
+            try {
+                const setupResp = await fetch('/api/auth/ensure-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: normalizedEmail, password }),
+                });
+
+                if (!setupResp.ok) {
+                    const payload = await setupResp.json().catch(() => ({}));
+                    throw new Error(payload.error || 'Unable to prepare admin account.');
+                }
+            } catch (setupError) {
+                setAuthError(setupError.message || 'Unable to prepare admin account.');
+                setLoginLoading(false);
+                return;
+            }
+        }
+
         const { data, error } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
+            email: normalizedEmail,
             password,
         });
 
@@ -1574,9 +1597,9 @@ function NotificationsAdminPanel({ notifications, setNotifications, users, form,
             message: 'We received your payment top-up request. Admin is reviewing the proof and will update your wallet shortly.',
         },
         {
-            label: 'Indexing complete',
-            title: 'Indexing batch completed',
-            message: 'Your submitted URLs have finished processing. Open the indexing dashboard to review the latest status.',
+            label: 'Discovery submitted',
+            title: 'Discovery signals submitted',
+            message: 'Your submitted URLs were added to discovery signals. Open the indexing dashboard to review Google index status.',
         },
         {
             label: 'Support reply',

@@ -257,23 +257,23 @@ function SectionStatus() {
             code:
                 `{
   "job_id": "job_x9K2mNpQr4tYvWz8",
-  "status": "completed",
+  "status": "waiting_for_google",
   "total": 2,
-  "indexed": 2,
+  "indexed": 1,
   "failed": 0,
-  "pending": 0,
+  "pending": 1,
   "results": [
     {
       "url": "https://yoursite.com/blog/new-post",
       "status": "indexed",
-      "method": "google",
+      "method": "sitemap_discovery",
       "indexed_at": "2025-05-14T09:24:05.000Z"
     },
     {
       "url": "https://yoursite.com/products/widget-v2",
-      "status": "indexed",
-      "method": "indexnow",
-      "indexed_at": "2025-05-14T09:23:58.000Z"
+      "status": "waiting_for_google",
+      "method": "sitemap_discovery",
+      "indexed_at": null
     }
   ]
 }`
@@ -327,35 +327,35 @@ function SectionWebhooks() {
     return React.createElement('div', null,
         React.createElement('h2', { style: { fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 14, fontFamily: T.font } }, 'Webhooks'),
         React.createElement('p', { style: { color: T.txt1, lineHeight: 1.8, marginBottom: 24 } },
-            'Register a webhook URL in your dashboard settings to receive real-time POST notifications when indexing jobs complete, fail, or hit quota limits.'
+            'Register a webhook URL in your dashboard settings to receive real-time POST notifications when discovery is submitted, URLs are indexed, URLs fail, or quotas are reached.'
         ),
         React.createElement(CodeBlock, {
             lang: 'json — Webhook Payload',
             code:
                 `{
-  "event": "job.completed",
+  "event": "job.discovery_submitted",
   "job_id": "job_x9K2mNpQr4tYvWz8",
   "timestamp": "2025-05-14T09:24:05.000Z",
   "data": {
     "total": 50,
-    "indexed": 48,
+    "waiting_for_google": 48,
     "failed": 2,
     "duration_ms": 14200
   }
 }`
         }),
         React.createElement('div', { style: { marginTop: 22, display: 'flex', flexDirection: 'column', gap: 10 } },
-            ['job.completed', 'job.failed', 'job.quota_warning', 'url.indexed', 'url.failed'].map(function (evt) {
+            ['job.discovery_submitted', 'job.failed', 'job.quota_warning', 'url.indexed', 'url.not_indexed'].map(function (evt) {
                 return React.createElement('div', {
                     key: evt, style: { display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 10 }
                 },
                     React.createElement('div', { style: { width: 8, height: 8, borderRadius: '50%', background: T.cyan, flexShrink: 0 } }),
                     React.createElement('code', { style: { fontSize: '0.8125rem', fontFamily: T.mono, color: T.cyan, flex: 1 } }, evt),
                     React.createElement('span', { style: { fontSize: '0.75rem', color: T.txt2, fontFamily: T.font } },
-                        evt.includes('completed') ? 'When all URLs in a job finish' :
+                        evt.includes('discovery_submitted') ? 'When discovery signals have been submitted' :
                             evt.includes('failed') ? 'When a job or URL fails permanently' :
                                 evt.includes('quota') ? 'When usage hits 80% of daily limit' :
-                                    evt.includes('indexed') ? 'Per-URL success event' : 'Per-URL failure event'
+                                    evt.includes('not_indexed') ? 'Per-URL not indexed result' : 'Per-URL indexed result'
                     )
                 );
             })

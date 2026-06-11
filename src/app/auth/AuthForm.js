@@ -48,11 +48,23 @@ export default function AuthForm({ mode = 'signin' }) {
         }
     }
 
+    function getAuthErrorMessage(err) {
+        const text = err?.message || err?.error_description || '';
+
+        if (/invalid login credentials/i.test(text)) {
+            return 'Email or password is incorrect. Create an account first, or reset the password in Supabase.';
+        }
+
+        return text || 'Authentication failed. Please try again.';
+    }
+
     async function submitAuth(event) {
         event.preventDefault();
         setMessage('');
 
-        if (!email || !password) {
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (!normalizedEmail || !password) {
             setMessageType('error');
             setMessage('Please enter your email and password.');
             return;
@@ -82,7 +94,7 @@ export default function AuthForm({ mode = 'signin' }) {
                     const resp = await fetch('/api/auth/signup', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password }),
+                        body: JSON.stringify({ email: normalizedEmail, password }),
                     });
 
                     const payload = await readJsonResponse(resp);
@@ -93,7 +105,7 @@ export default function AuthForm({ mode = 'signin' }) {
                     createdByServer = true;
                 } catch (serverError) {
                     const { error: signUpError } = await supabase.auth.signUp({
-                        email,
+                        email: normalizedEmail,
                         password,
                     });
 
@@ -104,7 +116,7 @@ export default function AuthForm({ mode = 'signin' }) {
 
                 // Now sign in the newly created user to establish a session
                 const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-                    email,
+                    email: normalizedEmail,
                     password,
                 });
 
@@ -130,7 +142,7 @@ export default function AuthForm({ mode = 'signin' }) {
             }
 
             const { data, error } = await supabase.auth.signInWithPassword({
-                email,
+                email: normalizedEmail,
                 password,
             });
 
@@ -145,9 +157,8 @@ export default function AuthForm({ mode = 'signin' }) {
                 setMessage('Sign-in initiated. Please check your email or try again.');
             }
         } catch (err) {
-            const text = err?.message || err?.error_description || JSON.stringify(err) || 'Authentication failed. Please try again.';
             setMessageType('error');
-            setMessage(text);
+            setMessage(getAuthErrorMessage(err));
         } finally {
             setLoading(false);
         }

@@ -3,7 +3,7 @@ dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 const crypto = require('crypto');
-const { Worker, QueueEvents } = require('bullmq');
+const { Queue, Worker, QueueEvents } = require('bullmq');
 const Redis = require('ioredis');
 const { createClient } = require('@supabase/supabase-js');
 const ws = require('ws');
@@ -12,6 +12,8 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const API_BASE = 'https://www.googleapis.com/webmasters/v3';
 const SCOPE = 'https://www.googleapis.com/auth/webmasters';
 const MAX_URLS_PER_SITEMAP = 50000;
+const RECHECK_DELAY_MS = Number(process.env.INDEX_RECHECK_DELAY_MS || 6 * 60 * 60 * 1000);
+const MAX_INDEX_CHECK_ATTEMPTS = Number(process.env.INDEX_CHECK_MAX_ATTEMPTS || 3);
 
 let cachedGoogleToken = null;
 
@@ -44,12 +46,14 @@ const supabase = createClient(
     }
 );
 
+const indexingQueue = new Queue('indexing', { connection });
+
 function baseUrl() {
     return (process.env.NEXT_PUBLIC_SITE_URL || 'https://speedyindexer.com').replace(/\/$/, '');
 }
 
 function sitemapIndexUrl() {
-    return `${baseUrl()}/sitemaps/google-discovery-index.xml`;
+    return `${baseUrl()}/sitemap-index.xml`;
 }
 
 function sitemapUrl(fileName) {
@@ -221,6 +225,118 @@ async function submitSitemapToGoogle(url) {
     }
 }
 
+async function pingUrl(url, action) {
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'User-Agent': 'SpeedyIndexerBot/1.0 (+https://speedyindexer.com)' },
+    }).catch((error) => ({ ok: false, status: 0, error }));
+    await logGoogleResponse(action, response.status || 0, response.error ? { error: response.error.message } : null, {
+        url,
+    });
+    return response.ok;
+}
+
+async function pingDiscoverySignals(sitemapIndex) {
+    const encoded = encodeURIComponent(sitemapIndex);
+    const results = await Promise.allSettled([
+        pingUrl(`https://www.google.com/ping?sitemap=${encoded}`, 'ping_google_sitemap'),
+        pingUrl(`https://www.bing.com/ping?sitemap=${encoded}`, 'ping_bing_sitemap'),
+    ]);
+
+    return results.map((result) => result.status === 'fulfilled' ? result.value : false);
+}
+
+function getIndexSearchQuery(url) {
+    return `site:${url}`;
+}
+
+function isUrlInSearchItems(url, items = []) {
+    const normalized = url.replace(/\/$/, '');
+    return items.some((item) => {
+        const link = String(item.link || item.url || '').replace(/\/$/, '');
+        return link === normalized;
+    });
+}
+
+async function checkIndexingStatus(url) {
+    const query = getIndexSearchQuery(url);
+
+    if (process.env.SERPAPI_KEY) {
+        const response = await fetch(`https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(query)}&api_key=${encodeURIComponent(process.env.SERPAPI_KEY)}`);
+        const body = await response.json().catch(() => ({}));
+        await logGoogleResponse('index_check_serpapi', response.status, body, { url, query });
+
+        if (!response.ok) throw new Error(body.error || `SerpAPI index check failed with ${response.status}`);
+
+        const items = body.organic_results || [];
+        return {
+            configured: true,
+            indexed: isUrlInSearchItems(url, items),
+            provider: 'serpapi',
+            query,
+            checkedItems: items.length,
+        };
+    }
+
+    if (process.env.GOOGLE_CUSTOM_SEARCH_API_KEY && process.env.GOOGLE_CUSTOM_SEARCH_CX) {
+        const params = new URLSearchParams({
+            key: process.env.GOOGLE_CUSTOM_SEARCH_API_KEY,
+            cx: process.env.GOOGLE_CUSTOM_SEARCH_CX,
+            q: query,
+        });
+        const response = await fetch(`https://www.googleapis.com/customsearch/v1?${params.toString()}`);
+        const body = await response.json().catch(() => ({}));
+        await logGoogleResponse('index_check_custom_search', response.status, body, { url, query });
+
+        if (!response.ok) throw new Error(body?.error?.message || `Custom Search index check failed with ${response.status}`);
+
+        const items = body.items || [];
+        return {
+            configured: true,
+            indexed: isUrlInSearchItems(url, items),
+            provider: 'google_custom_search',
+            query,
+            checkedItems: items.length,
+        };
+    }
+
+    return {
+        configured: false,
+        indexed: false,
+        provider: 'not_configured',
+        query,
+        checkedItems: 0,
+        message: 'Set SERPAPI_KEY or GOOGLE_CUSTOM_SEARCH_API_KEY + GOOGLE_CUSTOM_SEARCH_CX to enable indexing checks.',
+    };
+}
+
+async function scheduleIndexRecheck(urlRecord, attempt = 1) {
+    const recheckAt = new Date(Date.now() + RECHECK_DELAY_MS).toISOString();
+    await updateUrl(urlRecord.id, {
+        status: 'waiting_for_google',
+        recheck_at: recheckAt,
+        response: 'Discovery submitted. Waiting for Google to crawl and decide whether to index.',
+    });
+
+    await indexingQueue.add('check-indexing', {
+        id: urlRecord.id,
+        url: urlRecord.final_url || urlRecord.url,
+        user_id: urlRecord.user_id,
+        action: 'check_indexing',
+        attempt,
+    }, {
+        delay: RECHECK_DELAY_MS,
+        attempts: 1,
+        removeOnComplete: true,
+        removeOnFail: false,
+    });
+
+    await addLog(urlRecord.id, 'index_recheck_scheduled', 'Indexing recheck scheduled.', {
+        recheck_at: recheckAt,
+        attempt,
+    });
+}
+
 async function updateUrl(id, values) {
     const { error } = await supabase
         .from('urls')
@@ -389,7 +505,7 @@ async function getOpenSitemapBatch() {
         .limit(1)
         .maybeSingle();
     const batchNumber = Number(latest?.batch_number || 0) + 1;
-    const fileName = `google-discovery-${String(batchNumber).padStart(4, '0')}.xml`;
+    const fileName = `user-urls-${batchNumber}.xml`;
     const { data: created, error } = await supabase
         .from('google_sitemaps')
         .insert({
@@ -435,13 +551,67 @@ const worker = new Worker(
         const { id, url, user_id } = job.data;
         if (!id || !url || !user_id) throw new Error('Queue job is missing id, url, or user_id.');
 
+        if (job.data.action === 'check_indexing') {
+            await addLog(id, 'index_check_started', 'Checking whether Google reports the exact URL as indexed.', {
+                attempt: job.data.attempt || 1,
+            });
+
+            const result = await checkIndexingStatus(url);
+            const checkedAt = new Date().toISOString();
+
+            if (!result.configured) {
+                await updateUrl(id, {
+                    status: 'waiting_for_google',
+                    index_checked_at: checkedAt,
+                    index_check_result: result,
+                    response: result.message,
+                });
+                await addLog(id, 'index_check_skipped', result.message, result);
+                return { success: true, indexed: false, configured: false };
+            }
+
+            if (result.indexed) {
+                await updateUrl(id, {
+                    status: 'indexed',
+                    indexed_at: checkedAt,
+                    index_checked_at: checkedAt,
+                    index_check_result: result,
+                    response: 'Google search result found the exact URL.',
+                });
+                await addLog(id, 'indexed', 'Google search result found the exact URL.', result);
+                return { success: true, indexed: true };
+            }
+
+            const attempt = Number(job.data.attempt || 1);
+            if (attempt < MAX_INDEX_CHECK_ATTEMPTS) {
+                await updateUrl(id, {
+                    status: 'waiting_for_google',
+                    index_checked_at: checkedAt,
+                    index_check_result: result,
+                    response: `Not indexed yet. Recheck ${attempt + 1} scheduled.`,
+                });
+                await scheduleIndexRecheck({ id, url, user_id }, attempt + 1);
+                await addLog(id, 'not_indexed_retrying', 'URL was not found yet; another recheck was scheduled.', result);
+                return { success: true, indexed: false, retrying: true };
+            }
+
+            await updateUrl(id, {
+                status: 'not_indexed',
+                index_checked_at: checkedAt,
+                index_check_result: result,
+                response: 'Google search result did not find the exact URL after rechecks.',
+            });
+            await addLog(id, 'not_indexed', 'Google search result did not find the exact URL after rechecks.', result);
+            return { success: true, indexed: false };
+        }
+
         await addLog(id, 'job_queued', 'Google discovery job picked up by worker.');
-        await updateUrl(id, { status: 'validating', response: null });
+        await updateUrl(id, { status: 'processing', response: null });
         await addLog(id, 'validation_started', 'URL validation started.');
 
         const validation = await validateUrl(url);
         await updateUrl(id, {
-            status: validation.isValid ? 'valid' : 'invalid',
+            status: validation.isValid ? 'processing' : 'failed',
             http_status: validation.statusCode,
             final_url: validation.finalUrl,
             canonical_url: validation.canonicalUrl,
@@ -460,7 +630,7 @@ const worker = new Worker(
 
         const sitemap = await addUrlToSitemap({ id, url, user_id }, validation);
         await updateUrl(id, {
-            status: 'sitemap_added',
+            status: 'processing',
             sitemap_url: sitemap.sitemap_url,
             sitemap_index_url: sitemap.index_url,
             response: 'URL added to Google discovery sitemap.',
@@ -470,12 +640,14 @@ const worker = new Worker(
         if (!hasGoogleAuth()) {
             const message = 'Sitemap updated, but Google Search Console submission requires OAuth refresh token or service account access.';
             await updateUrl(id, {
-                status: 'google_submission_failed',
-                response: message,
+                status: 'discovery_submitted',
+                response: `${message} Public sitemap and discovery page signals were still created.`,
+                discovery_submitted_at: new Date().toISOString(),
             });
-            await addLog(id, 'google_submission_failed', message, {
+            await addLog(id, 'discovery_submitted', message, {
                 sitemap_index_url: sitemapIndexUrl(),
             });
+            await scheduleIndexRecheck({ id, url, user_id, final_url: validation.finalUrl }, 1);
             return {
                 success: true,
                 url,
@@ -488,33 +660,32 @@ const worker = new Worker(
             await submitSitemapToGoogle(sitemapIndexUrl());
         } catch (error) {
             await updateUrl(id, {
-                status: 'google_submission_failed',
+                status: 'failed',
                 response: error.message,
             });
-            await addLog(id, 'google_submission_failed', error.message, {
+            await addLog(id, 'discovery_submission_failed', error.message, {
                 sitemap_index_url: sitemapIndexUrl(),
             });
             throw error;
         }
+
+        await pingDiscoverySignals(sitemapIndexUrl());
 
         await supabase
             .from('google_sitemaps')
             .update({ status: 'submitted', submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
             .eq('id', sitemap.id);
         await updateUrl(id, {
-            status: 'sitemap_submitted',
-            response: 'Sitemap index submitted to Google Search Console.',
+            status: 'discovery_submitted',
+            response: 'Discovery signals submitted. Google indexing is not guaranteed.',
             submitted_at: new Date().toISOString(),
+            discovery_submitted_at: new Date().toISOString(),
         });
-        await addLog(id, 'sitemap_submitted', 'Sitemap index submitted to Google Search Console.', {
+        await addLog(id, 'discovery_submitted', 'Sitemap index submitted to Google Search Console and pinged.', {
             sitemap_index_url: sitemapIndexUrl(),
         });
 
-        await updateUrl(id, {
-            status: 'completed',
-            response: 'Google discovery pipeline completed. Indexing is not guaranteed.',
-        });
-        await addLog(id, 'processing_completed', 'Google discovery pipeline completed.');
+        await scheduleIndexRecheck({ id, url, user_id, final_url: validation.finalUrl }, 1);
 
         return { success: true, url, sitemapIndexUrl: sitemapIndexUrl() };
     },
@@ -535,6 +706,7 @@ worker.on('failed', async (job, error) => {
 async function shutdown() {
     await events.close();
     await worker.close();
+    await indexingQueue.close();
     await connection.quit();
     process.exit(0);
 }

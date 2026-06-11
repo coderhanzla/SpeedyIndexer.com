@@ -226,10 +226,10 @@ function SearchBar() {
    NOTIFICATION CENTER
 ───────────────────────────────────────── */
 const NOTIFICATIONS = [
-    { type: 'success', title: 'Bulk job complete', body: '2,400 URLs indexed successfully', time: '2m ago', color: '#10b981' },
+    { type: 'success', title: 'Discovery submitted', body: '2,400 URLs submitted for crawl discovery', time: '2m ago', color: '#10b981' },
     { type: 'warning', title: 'Google API at 82%', body: 'Approaching daily quota limit', time: '18m ago', color: '#f59e0b' },
     { type: 'info', title: 'Team member joined', body: 'sarah@agency.com accepted invite', time: '1h ago', color: '#00d4ff' },
-    { type: 'success', title: 'Sitemap indexed', body: '980 URLs extracted from sitemap.xml', 'time': '2h ago', color: '#10b981' },
+    { type: 'success', title: 'Sitemap refreshed', body: '980 URLs available in discovery sitemap', 'time': '2h ago', color: '#10b981' },
     { type: 'error', title: '3 jobs failed', body: 'Retry queue processing now', time: '3h ago', color: '#ef4444' },
 ];
 

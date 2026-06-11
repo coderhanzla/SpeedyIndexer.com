@@ -4,7 +4,7 @@ import { renderSitemapFile, renderSitemapIndex } from '../../services/sitemapGen
 export async function GET(_req, { params }) {
     try {
         const { file } = await params;
-        const xml = file === 'google-discovery-index.xml'
+        const xml = file === 'google-discovery-index.xml' || file === 'sitemap-index.xml'
             ? await renderSitemapIndex()
             : await renderSitemapFile(file);
 

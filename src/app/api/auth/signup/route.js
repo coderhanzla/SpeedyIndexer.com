@@ -9,7 +9,8 @@ export async function POST(req) {
     if (!body) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
-    const { email, password } = body
+    const email = String(body.email || '').trim().toLowerCase()
+    const { password } = body
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Missing email or password' }, { status: 400 })

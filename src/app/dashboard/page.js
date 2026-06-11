@@ -21,7 +21,21 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-const statusLabels = ['queued', 'validating', 'sitemap_added', 'sitemap_submitted', 'completed', 'failed'];
+const statusLabels = ['queued', 'processing', 'discovery_submitted', 'waiting_for_google', 'indexed', 'not_indexed', 'failed'];
+
+const statusCopy = {
+    queued: 'Queued',
+    processing: 'Processing',
+    discovery_submitted: 'Discovery submitted',
+    waiting_for_google: 'Waiting for Google',
+    indexed: 'Indexed',
+    not_indexed: 'Not indexed yet',
+    failed: 'Failed',
+};
+
+function formatStatus(status) {
+    return statusCopy[status] || statusCopy.queued;
+}
 
 function formatDateLabel(value) {
     if (!value) return '-';
@@ -184,7 +198,7 @@ export default function DashboardPage() {
                 method: 'POST',
                 body: JSON.stringify({ urls: parsedUrls }),
             });
-            setNotice(`${payload.queued || 0} URLs submitted for Google discovery. ${payload.creditsDeducted || 0} credits used.`);
+            setNotice(`${payload.queued || 0} URLs submitted for discovery. ${payload.creditsDeducted || 0} credits used. Completed means submitted for discovery, not guaranteed Google indexing.`);
             setUrlsText('');
             await loadDashboard();
         } catch (error) {
@@ -235,6 +249,10 @@ export default function DashboardPage() {
 
                 {notice && <div className="ri-notice">{notice}</div>}
 
+                <div className="ri-notice">
+                    Completed means submitted for discovery, not guaranteed Google indexing.
+                </div>
+
                 <section className="ri-grid">
                     <article className="ri-card ri-credit-card">
                         <div className="ri-card-head">
@@ -274,7 +292,7 @@ export default function DashboardPage() {
                     <article className="ri-card ri-submit">
                         <div className="ri-card-title">
                             <h2>Enter URLs for Indexing</h2>
-                            <span>Google discovery and sitemap submission</span>
+                            <span>Validation, sitemap inclusion, and Google discovery signals</span>
                         </div>
                         <form onSubmit={submitUrls}>
                             <textarea
@@ -296,13 +314,13 @@ export default function DashboardPage() {
 
                     <article className="ri-card">
                         <div className="ri-card-title">
-                            <h2>Queue / Google Discovery Status</h2>
-                            <span>Crawl signal processing</span>
+                            <h2>Discovery / Index Status</h2>
+                            <span>Discovery submission is separate from Google indexing</span>
                         </div>
                         <div className="ri-status-grid">
                             {statusLabels.map((status) => (
                                 <div key={status}>
-                                    <span>{status}</span>
+                                    <span>{formatStatus(status)}</span>
                                     <strong>{statusCounts[status] || 0}</strong>
                                 </div>
                             ))}
@@ -323,7 +341,7 @@ export default function DashboardPage() {
                                 <div key={item.id}>
                                     <span>{item.url}</span>
                                     <small>{formatDateLabel(item.created_at)}</small>
-                                    <b>{item.status || 'queued'}</b>
+                                    <b>{formatStatus(item.status)}</b>
                                 </div>
                             ))}
                         </div>

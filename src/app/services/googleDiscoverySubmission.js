@@ -93,7 +93,7 @@ export async function queueGoogleDiscoveryUrls(req, inputUrls) {
                 user_id: auth.user.id,
                 url,
                 status: 'queued',
-                response: 'Queued for Google discovery validation.',
+                response: 'Queued for URL validation and discovery submission.',
             })
             .select()
             .single();
@@ -108,7 +108,7 @@ export async function queueGoogleDiscoveryUrls(req, inputUrls) {
             .insert({
                 url_id: data.id,
                 event: 'queued',
-                message: 'URL queued for Google discovery pipeline.',
+                message: 'URL queued for validation, sitemap inclusion, and discovery submission.',
             });
 
         try {
@@ -167,6 +167,6 @@ export async function queueGoogleDiscoveryUrls(req, inputUrls) {
         creditsDeducted: testMode ? 0 : acceptedUrls.length - insertFailed,
         balanceAfter: testMode ? 40 : Number(spent.credits_balance || 0) + insertFailed,
         testMode,
-        message: 'URLs queued for Google discovery. Indexing is not guaranteed.',
+        message: 'URLs queued for discovery. Completed means submitted for discovery, not guaranteed Google indexing.',
     });
 }
